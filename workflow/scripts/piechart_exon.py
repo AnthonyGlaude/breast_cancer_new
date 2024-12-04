@@ -1,47 +1,86 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-import io
-
-# Charger le fichier VCF (ignorer les lignes de commentaires commençant par ##)
+# Chemins des fichiers
+gtf_file = "F:/breast_cancer/workflow/data/references/gtf/homo_sapiens.gtf"
 vcf_file = "F:/breast_cancer/workflow/results/fraction/variants/171992_SIMG0590_T_totalRNA_sarcoma_43378_S9_L002/20QC_variant.vcf"
-with open(vcf_file, 'r') as f:
-    lines = [line for line in f if not line.startswith('##')]
+gtf_df = pd.read_csv(gtf_file, sep='\t', comment='#', header=None)
+vcf_df = pd.read_csv(vcf_file, sep='\t', comment='#', header=None)
 
-df = pd.read_csv(io.StringIO(''.join(lines)), sep='\t')
+gtf_df.columns = ['CHROM', 'source', 'feature', 'start', 'end', 'score', 'strand', 'frame', 'attribute']
+vcf_df.columns = ['#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO', 'FORMAT', 'NEW_COLUMN']
 
-# Renommer les colonnes pour plus de clarté
-df.columns = ["CHROM", "POS", "ID", "REF", "ALT", "QUAL", "FILTER", "INFO", "FORMAT", "SAMPLE"]
+# Fonction pour obtenir les attributs comme 'gene_id' et 'transcript_id'
+def extract_attributes(attribute_str):
+    attributes = {}
+    for attr in attribute_str.split(';'):
+        if attr.strip():  # Ignore les éléments vides
+            key, value = attr.split(' ', 1)
+            key = key.strip().lower()  # Assure-toi que la clé est en minuscules
+            value = value.strip().strip('"')  # Retirer les guillemets autour de la valeur
+            attributes[key] = value
+    return attributes
 
-# Extraire les informations des annotations (champ INFO, clé ANN)
-annotations = []
-for info in df["INFO"]:
-    ann_field = [field for field in info.split(';') if field.startswith('ANN=')]
-    if ann_field:
-        ann_value = ann_field[0].split('=')[1]
-        annotations.append(ann_value)
+# Applique l'extraction des attributs sur la colonne 'attribute'
+gtf_df['attributes'] = gtf_df['attribute'].apply(extract_attributes)
+
+# Extraire 'gene_id' et 'transcript_id'
+gtf_df['gene_id'] = gtf_df['attributes'].apply(lambda x: x.get('gene_id', None))
+gtf_df['transcript_id'] = gtf_df['attributes'].apply(lambda x: x.get('transcript_id', None))
+
+# Fonction pour obtenir la région intragénique pour chaque variant
+def get_feature_for_variant(row):
+    chrom = row['#CHROM']
+    pos = row['POS']
+    
+    # Debugging: Afficher les valeurs de chrom et pos pour chaque variant
+    print(f"Processing variant at Chrom: {chrom}, Position: {pos}")
+    
+    # Rechercher les régions dans le GTF qui chevauchent la position du variant
+    matching_gtf = gtf_df[(gtf_df['CHROM'] == chrom) & (gtf_df['start'] <= pos) & (gtf_df['end'] >= pos)]
+    
+    # Debugging: Afficher le résultat de la recherche
+    if not matching_gtf.empty:
+        print(f"Match found: {matching_gtf[['feature', 'start', 'end']]}")
+
+        # Comptage des occurrences de chaque fonctionnalité
+        feature_counts = matching_gtf['feature'].value_counts()
+
+        # Si transcript, exon et gene sont présents, appliquer la règle : transcript > exon > gene
+        if 'transcript' in feature_counts.index:
+            return "transcript"
+        elif 'exon' in feature_counts.index:
+            return "exon"
+        elif 'gene' in feature_counts.index:
+            return "gene"
+        else:
+            return feature_counts.idxmax()  # Si aucun des précédents, retourner la fonctionnalité la plus fréquente
     else:
-        annotations.append("")
+        # Debugging: Afficher quand aucune correspondance n'est trouvée
+        print(f"No match found for variant at Chrom: {chrom}, Position: {pos}")
+    
+    return "Région Intragénique"  # Si aucune correspondance
 
-# Extraire les types d'annotations
-mutation_types = []
-for ann in annotations:
-    if ann:
-        mutation = ann.split('|')[1]  # Le type de région est dans la 2e colonne après '|'
-        mutation_types.append(mutation)
-    else:
-        mutation_types.append("Unknown")
+# Applique la fonction sur chaque ligne du DataFrame VCF
+vcf_df['Feature'] = vcf_df.apply(get_feature_for_variant, axis=1)
+feature_counts = vcf_df['Feature'].value_counts()
 
-# Ajouter les types d'annotations au DataFrame
-df["Mutation_Type"] = mutation_types
+# Définir les couleurs spécifiques pour chaque catégorie
+colors = {
+    "transcript": "#548235",      # Couleur pour transcript
+    "exon": "#FFD700",            # Couleur pour exon (exemple)
+    "gene": "#98FB98",            # Couleur pour gene (exemple)
+    "Région Intragénique": "#A3D08E"  # Couleur pour Région Intragénique
+}
 
-# Compter les occurrences des types de mutation
-mutation_counts = df["Mutation_Type"].value_counts()
+# Plot pie chart avec couleurs spécifiques
+plt.figure(figsize=(8, 6), dpi=600)
+feature_counts.plot(kind='pie', autopct='%1.1f%%', startangle=90, cmap='Set3', colors=[colors.get(label, "#D3D3D3") for label in feature_counts.index], legend=False)
 
-# Créer un graphique en camembert
-plt.figure(figsize=(8, 8))
-mutation_counts.plot.pie(autopct='%1.1f%%', startangle=90, colormap='tab10')
-plt.title("Répartition des mutations par type de région")
-plt.ylabel("")  # Supprimer l'étiquette de l'axe Y
-print("bob")
+plt.ylabel('')
+#plt.title("Distribution des variants par localisation intragénique")
 plt.show()
+plt.savefig("piechart_high_res.png", dpi=600)
+
+# Affiche les comptages des différentes régions
+print(feature_counts)

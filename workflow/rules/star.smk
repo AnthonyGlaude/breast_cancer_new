@@ -121,7 +121,7 @@ rule star_alignreads:
     log:
         "logs/STAR/{id}.log"
     threads:
-        8
+        10
     conda:
         "../envs/star.yml"
     shell:
@@ -141,7 +141,7 @@ rule star_alignreads:
             --outFilterMatchNminOverLread 0.3 \
             --outFilterMultimapNmax 100 \
             --winAnchorMultimapNmax 100 \
-            --limitBAMsortRAM 15000000000 \
+            --limitBAMsortRAM 30000000000 \
             --outTmpDir /home/antho/temp \ 
             &> {log}
         """
