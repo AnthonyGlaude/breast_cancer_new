@@ -57,21 +57,21 @@ rule filter_transcriptome_by_mutations:
         "../scripts/filter_mutated_genes_and_filter_transcriptome.py"  # Script Python pour extraire les gènes mutés et filtrer directement
 
 
-#rule apply_variants: 
-#    input:
-#        #fasta = rules.build_transcriptome.output.transcriptome,
-#        fasta = rules.download_human_genome.output.genome,  # Remplacez par le chemin réel
-#        vcf = rules.filter_variants.output.vcf_filtered,  # Fichier VCF filtré
-#        gtf = rules.download_human_gtf.output.gtf  # Fichier GTF
-#    output:
-#        fasta = "results/variants/{id}/transcrits_variants.fa"  # Fichier de sortie pour les transcrits avec variantes
-#    conda:
-#        "../envs/python.yml"  # Environnement Conda si nécessaire
-#    log:
-#        "logs/apply_variants_{id}.log"
-#    script:
-#        "../scripts/add_variants.py"  # Chemin vers votre script
-#
+rule apply_variants:
+    input:
+        fasta = rules.download_human_genome.output.genome,  
+        vcf = rules.filter_variants.output.vcf_filtered,  
+        gtf = rules.download_human_gtf.output.gtf, 
+        transcriptome = rules.build_filtered_transcriptome.output.transcriptome_final_custom
+    output:
+        fasta = "results/variants/{id}/transcrits_variants.fa"  
+    conda:
+        "../envs/python.yml"  
+    log:
+        "logs/apply_variants_{id}.log" 
+    script:
+        "../scripts/add_variants.py"  
+
 #
 # Règle pour l'annotation des variants avec OpenVar
 #rule annotate_variants:
