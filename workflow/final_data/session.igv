@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<session genome="hg38" hasGeneTrack="true" hasSequenceTrack="true" version="8">
+    <Resources>
+        <Resource path="F:/breast_cancer/workflow/final_data/top_gene_abundance.bedgraph"/>
+    </Resources>
+    <Panel>
+        <Track id="F:/breast_cancer/workflow/final_data/top_gene_abundance.bedgraph" name="Top Gene Abundance" color="0,0,255" height="50"/>
+    </Panel>
+</session>
+goto chr1:179900262-179900564
+sortByFile
