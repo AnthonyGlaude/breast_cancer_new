@@ -5,10 +5,8 @@ def read_vcf(vcf_file):
     mutations = []
     with open(vcf_file, 'r') as vcf:
         for line in vcf:
-            if line.startswith('##'):
-                continue  
-            if line.startswith('#'):
-                continue  
+            if line.startswith('##') or line.startswith('#'):
+                continue
 
             fields = line.strip().split('\t')
             chromosome = fields[0]
@@ -20,39 +18,39 @@ def read_vcf(vcf_file):
 
             for item in info_field.split(';'):
                 if item.startswith('ANN='):
-                    # Extrait le nom du gène après "ANN=" et le premier '|'
                     gene_info = item.split('|')
                     if len(gene_info) > 3:
                         gene_name = gene_info[3]
             mutations.append((chromosome, position, ref_nucleotide, alt_nucleotide, gene_name))
+    
     mutations_df = pd.DataFrame(mutations, columns=['chromosome', 'position', 'ref_nucleotide', 'alt_nucleotide', 'gene_name'])
+    print("Mutations DataFrame:\n", mutations_df)  # Afficher le DataFrame des mutations
     return mutations_df
 
 def find_exons_for_mutations(vcf_df, gtf_file):
     exons = []
-    with open(gtf_file, 'r') as gtf:
-        for line in gtf:
-            if line.startswith('#'):
-                continue
-            fields = line.strip().split('\t')
-            if fields[2] == 'exon':  # On s'intéresse uniquement aux exons
-                chromosome = fields[0]
-                start = int(fields[3])
-                end = int(fields[4])
-                attributes = fields[8].split(';')
-                gene_name = None
+    for _, mutation in vcf_df.iterrows():
+        found_exon = False
+        with open(gtf_file, 'r') as gtf:
+            for line in gtf:
+                if line.startswith('#'):
+                    continue
+                fields = line.strip().split('\t')
+                if fields[2] == 'exon':
+                    chromosome = fields[0]
+                    start = int(fields[3])
+                    end = int(fields[4])
+                    attributes = fields[8].split(';')
+                    gene_name = None
 
-                # Extraire le nom du gène
-                for attribute in attributes:
-                    if 'gene_name' in attribute:
-                        gene_name = attribute.split(' ')[-1].replace('"', '')
-                        break
+                    for attribute in attributes:
+                        if 'gene_name' in attribute:
+                            gene_name = attribute.split(' ')[-1].replace('"', '')
+                            break
 
-                # Vérifier si un variant est dans cet exon
-                for _, mutation in vcf_df.iterrows():
                     if (mutation['chromosome'] == chromosome and 
                         start <= mutation['position'] <= end and 
-                        mutation['gene_name'] == gene_name):  # Vérification du gène
+                        mutation['gene_name'] == gene_name):
                         exons.append({
                             'chromosome': chromosome,
                             'position': mutation['position'],
@@ -62,12 +60,15 @@ def find_exons_for_mutations(vcf_df, gtf_file):
                             'exon_start': start,
                             'exon_end': end
                         })
-                    elif (mutation['chromosome'] == chromosome and 
-                        (mutation['position'] < start or mutation['position'] > end) and 
-                        mutation['gene_name'] == gene_name):
-                        print(f"Warning: Mutation at position {mutation['position']} is outside the exon range ({start}-{end}) for gene {gene_name}.")
+                        found_exon = True
+                        break
+        
+        if not found_exon:
+            print(f"Warning: Mutation at position {mutation['position']} not found in any exon for gene {mutation['gene_name']}.")
 
-    return pd.DataFrame(exons)
+    exons_df = pd.DataFrame(exons)
+    print("Annotated Exons DataFrame:\n", exons_df)  # Afficher le DataFrame des exons annotés
+    return exons_df
 
 def extract_genomic_sequence(fasta_file, exons_df):
     genome = SeqIO.to_dict(SeqIO.parse(fasta_file, "fasta"))
@@ -80,9 +81,7 @@ def extract_genomic_sequence(fasta_file, exons_df):
         
         if chromosome in genome:
             seq_record = genome[chromosome]
-            # Extraire la séquence de l'exon
-            exon_sequence = str(seq_record.seq[exon['exon_start'] - 1: exon['exon_end']])  # -1 pour indexation 0
-            # Remplacer le nucléotide à la position de la mutation
+            exon_sequence = str(seq_record.seq[exon['exon_start'] - 1: exon['exon_end']])
             modified_sequence = exon_sequence[:position - exon['exon_start']] + alt_nucleotide + exon_sequence[position - exon['exon_start'] + 1:]
             
             mutated_sequences.append({
@@ -92,68 +91,69 @@ def extract_genomic_sequence(fasta_file, exons_df):
                 'modified_sequence': modified_sequence,
                 'gene_name': exon['gene_name']
             })
+        else:
+            print(f"Warning: Chromosome {chromosome} not found in the genome.")
 
-    return pd.DataFrame(mutated_sequences)
+    mutated_sequences_df = pd.DataFrame(mutated_sequences)
+    print("Mutated Sequences DataFrame:\n", mutated_sequences_df)  # Afficher le DataFrame des séquences mutées
+    return mutated_sequences_df
 
 def modify_transcriptome(transcriptome_file, mutated_exons_df, output_transcriptome_file):
-    # Lire le transcriptome
     transcripts = {record.id: str(record.seq) for record in SeqIO.parse(transcriptome_file, 'fasta')}
     
-    # Modifier les séquences en fonction des mutations
     for _, mutation in mutated_exons_df.iterrows():
         gene_name = mutation['gene_name']
-        position = mutation['position']  # Position dans le génome
+        position = mutation['position']
         alt_nucleotide = mutation['alt_nucleotide']
         
-        # Trouver le transcript correspondant
         transcript_id = next((trans_id for trans_id in transcripts if gene_name in trans_id), None)
         
         if transcript_id is not None:
             original_sequence = transcripts[transcript_id]
-            # Convertir la position génomique en position dans le transcript
-            # Ceci nécessite une connaissance de la relation entre le génome et le transcript
-            transcript_position = position  # Modifier cela si besoin, par exemple, en utilisant un décalage
+            transcript_position = position  # À ajuster si nécessaire
             
-            # Vérifier si la position est valide
             if 0 <= transcript_position - 1 < len(original_sequence):
-                # Modifier la séquence
                 modified_sequence = (original_sequence[:transcript_position - 1] + 
                                      alt_nucleotide + 
-                                     original_sequence[transcript_position:])  # Remplacer le nucléotide
+                                     original_sequence[transcript_position:])
                 
-                # Renommer le transcript modifié
                 new_transcript_id = f"{gene_name}_{mutation['ref_nucleotide']}_to_{mutation['alt_nucleotide']}"
                 
-                # Ajouter les séquences normales et modifiées au transcriptome
                 transcripts[transcript_id] = original_sequence  # Séquence normale
                 transcripts[new_transcript_id] = modified_sequence  # Séquence modifiée
+            else:
+                print(f"Warning: Position {transcript_position} is out of range for transcript {transcript_id}.")
+        else:
+            print(f"Warning: No transcript found for gene {gene_name}.")
 
-    # Écrire le transcriptome modifié dans un fichier FASTA
     with open(output_transcriptome_file, 'w') as output_handle:
         for trans_id, sequence in transcripts.items():
             output_handle.write(f">{trans_id}\n")
             output_handle.write(f"{sequence}\n")
+    print(f"Modified transcriptome saved to {output_transcriptome_file}.")
 
 def validate_and_save_results(mutated_sequences, output_file):
-    # Écrire les séquences modifiées dans un nouveau fichier FASTA
+    if mutated_sequences.empty:
+        print("No mutated sequences to write to output file.")
+        return
+
     with open(output_file, 'w') as output_fasta:
-        for seq in mutated_sequences:
+        for _, seq in mutated_sequences.iterrows():
             gene_name = seq['gene_name']
             modified_sequence = seq['modified_sequence']
 
-            # Enregistrer la séquence modifiée avec des annotations
             output_fasta.write(f">{gene_name}_modified\n")
             output_fasta.write(f"{modified_sequence}\n")
             
-            # Vérification de chaque modification
             print(f"Gene: {gene_name}, Modified Sequence: {modified_sequence}")
 
 def main():
     fasta_file = snakemake.input.fasta
     vcf_file = snakemake.input.vcf
-    gtf_file = snakemake.input.gtf
+    #gtf_file = snakemake.input.gtf
+    gtf_file = "/mnt/f/breast_cancer/workflow/data/references/gtf/homo_sapiens.gtf"
+    output_transcriptome_file = snakemake.input.transcriptome
     output_file = snakemake.output.fasta
-    output_transcriptome_file = snakemake.output.transcriptome
 
     vcf_df = read_vcf(vcf_file)
     annotated_exons_df = find_exons_for_mutations(vcf_df, gtf_file)
@@ -161,7 +161,6 @@ def main():
     
     modify_transcriptome(fasta_file, annotated_exons_df, output_transcriptome_file)
 
-    # Validation et enregistrement des résultats
     validate_and_save_results(mutated_sequences_df, output_file)
 
 if __name__ == "__main__":

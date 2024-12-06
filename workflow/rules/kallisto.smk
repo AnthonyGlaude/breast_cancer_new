@@ -1,11 +1,12 @@
 # Règle pour la quantification des transcrits avec Kallisto  **** A corriger, les paths && les dependances entre chaque rules)
 
-rule build_transcriptome:  # Sert de transcriptome de reference avec tout les id transcrits
+rule build_transcriptome:  # Sert de transcriptome de référence avec tous les ID transcrits
     input:
         genome = rules.download_human_genome.output.genome,
         gtf = rules.download_human_gtf.output.gtf
     output:
-        transcriptome = config["path"]["transcriptome"]
+        transcriptome = config["path"]["transcriptome"],  # Fichier pour les séquences des transcrits
+        positions = "data/references/transcit_position.txt"  # Chemin vers le fichier de positions
     conda:
         "../envs/gffread.yml"
     message:
@@ -13,7 +14,9 @@ rule build_transcriptome:  # Sert de transcriptome de reference avec tout les id
     log:
         "logs/build_transcriptome/build_transcriptome.log"
     shell:
-        "gffread {input.gtf} -g {input.genome} -w {output}"  
+        """
+        gffread {input.gtf} -g {input.genome} -w {output.transcriptome} -o {output.positions}
+        """
 
 
 rule kallisto_index: # L'index qui sert a quantifier

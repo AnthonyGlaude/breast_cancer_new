@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 # Chemins des fichiers
 gtf_file = "F:/breast_cancer/workflow/data/references/gtf/homo_sapiens.gtf"
-vcf_file = "F:/breast_cancer/workflow/results/fraction/variants/171992_SIMG0590_T_totalRNA_sarcoma_43378_S9_L002/20QC_variant.vcf"
+vcf_file = "F:/breast_cancer/workflow/results/variants/171992_SIMG0590_T_totalRNA_sarcoma_43378_S9_L002/20QC_variant.vcf"
 gtf_df = pd.read_csv(gtf_file, sep='\t', comment='#', header=None)
 vcf_df = pd.read_csv(vcf_file, sep='\t', comment='#', header=None)
 
