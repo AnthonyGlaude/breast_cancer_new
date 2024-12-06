@@ -2,6 +2,16 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 
+# Chemins des fichiers
+gtf_file = "F:/breast_cancer/workflow/data/references/gtf/homo_sapiens.gtf"
+vcf_file = "F:/breast_cancer/workflow/results/fraction/variants/171992_SIMG0590_T_totalRNA_sarcoma_43378_S9_L002/20QC_variant.vcf"
+gtf_df = pd.read_csv(gtf_file, sep='\t', comment='#', header=None)
+vcf_df = pd.read_csv(vcf_file, sep='\t', comment='#', header=None)
+
+gtf_df.columns = ['CHROM', 'source', 'feature', 'start', 'end', 'score', 'strand', 'frame', 'attribute']
+vcf_df.columns = ['#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO', 'FORMAT', 'NEW_COLUMN']
+
+# Fonction pour obtenir les attributs comme 'gene_id' et 'transcript_id'
 def extract_attributes(attribute_str):
     attributes = {}
     for attr in attribute_str.split(';'):
