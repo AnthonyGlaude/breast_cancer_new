@@ -38,4 +38,6 @@ rule download_human_genome:
         "mkdir -p data/references/genome_fa && " 
         "wget -O temp.gz {params.link} && "
         "gunzip temp.gz && "
-        "mv temp {output.genome}"
+        "mv temp {output.genome} && "
+        "touch {output.genome}"  # Met à jour l'horodatage
+

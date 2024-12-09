@@ -1,4 +1,4 @@
-rule call_variants: # Freebayes pour avoir la liste_mutant.vcf des dans l'ARNseq
+rule call_variants:  # Freebayes pour avoir la liste_mutant.vcf des dans l'ARNseq
     input:
         bam = rules.star_alignreads.output.bam,
         genome = rules.download_human_genome.output.genome,
@@ -8,7 +8,7 @@ rule call_variants: # Freebayes pour avoir la liste_mutant.vcf des dans l'ARNseq
         annotated_vcf = "results/variants/{id}/variants_annotated.vcf"
     params:
         out_dir = "results/variants",
-        min_alternate_count = 5,  
+        min_alternate_count = 5,
         min_coverage = 10
     conda:
         "../envs/freebayes.yml"
@@ -17,6 +17,7 @@ rule call_variants: # Freebayes pour avoir la liste_mutant.vcf des dans l'ARNseq
     threads: 8  
     shell: 
         """
+        set -e  # Arrête l'exécution en cas d'erreur
         mkdir -p results/variants && \
         freebayes -f {input.genome} \
             --min-alternate-count {params.min_alternate_count} \

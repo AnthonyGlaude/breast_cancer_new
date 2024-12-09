@@ -45,11 +45,12 @@ include: "rules/download_genome.smk"
 include: "rules/star.smk"
 include: "rules/kallisto.smk"
 include: "rules/variants.smk"
-#include: "rules/add_variants.smk"
+include: "rules/bedgraph.smk"
 
 rule all:
     input:
-        expand("data/references/transcit_position.txt", id=id_list),
+#        expand("data/references/transcit_position.txt", id=id_list),
+        expand("results/graph/{id}.bw", id=id_list),
         expand("data/qc/{id}/{id}_R1_001.220405.A00516.AHVHTNDSX2_fastqc.html", id=id_list),
         expand("data/qc/{id}/{id}_R2_001.220405.A00516.AHVHTNDSX2_fastqc.html", id=id_list),
         expand("data/trim_galore/{id}/{id}_R1_001.220405.A00516.AHVHTNDSX2_val_1.fq.gz", id=id_list), 
