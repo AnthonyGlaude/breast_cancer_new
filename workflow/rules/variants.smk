@@ -13,7 +13,7 @@ rule call_variants:  # Freebayes pour avoir la liste_mutant.vcf des dans l'ARNse
     conda:
         "../envs/freebayes.yml"
     log:
-        "logs/freebayes_{id}.log"
+        "logs/freebayes_{id}/freebayes.log"
     threads: 8  
     shell: 
         """
@@ -36,9 +36,8 @@ rule filter_variants: # QC des mutants avec trashold de 20
     conda:
         "../envs/bcftools.yml"  
     log:
-        "logs/filter_variants_{id}.log"
+        "logs/freebayes_{id}/filter_variants.log"
     shell:
-        #"scripts/filter_variants.py" 
         "bcftools filter -s LowQual -e 'QUAL<20' {input.vcf} -o {output.vcf_filtered} > {log} 2>&1"
 
 
@@ -65,26 +64,10 @@ rule apply_variants:
         gtf = rules.download_human_gtf.output.gtf, 
         transcriptome = rules.build_filtered_transcriptome.output.transcriptome_final_custom
     output:
-        fasta = "results/variants/{id}/transcrits_variants.fa"  
+        fasta = "results/final/{id}/transcrits_variants.fa"  
     conda:
         "../envs/python.yml"  
     log:
-        "logs/apply_variants_{id}.log" 
+        "logs/freebayes_{id}/apply_variants.log" 
     script:
         "../scripts/add_variants.py"  
-
-#
-# Règle pour l'annotation des variants avec OpenVar
-#rule annotate_variants:
-#    input:
-#        vcf = rules.call_variants.output.vcf
-#    output:
-#        annotated_vcf = "data/variants/{id}_annotated.vcf"
-#    conda:
-#        "../envs/openvar.yml"  # Assurez-vous que ce chemin est correct
-#    log:
-#        "logs/openvar_{id}.log"
-#    shell:
-#        """
-#        openvar -i {input.vcf} -o {output.annotated_vcf} &> {log}
-#        """

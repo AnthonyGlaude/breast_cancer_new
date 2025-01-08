@@ -150,8 +150,8 @@ def validate_and_save_results(mutated_sequences, output_file):
 def main():
     fasta_file = snakemake.input.fasta
     vcf_file = snakemake.input.vcf
-    #gtf_file = snakemake.input.gtf
-    gtf_file = "/mnt/f/breast_cancer/workflow/data/references/gtf/homo_sapiens.gtf"
+    gtf_file = snakemake.input.gtf
+    #gtf_file = "/mnt/f/breast_cancer/workflow/data/references/gtf/homo_sapiens.gtf"
     output_transcriptome_file = snakemake.input.transcriptome
     output_file = snakemake.output.fasta
 

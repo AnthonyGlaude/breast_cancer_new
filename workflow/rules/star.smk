@@ -1,12 +1,7 @@
 #Alignement des séquences ADNc (proviennent ARN-seq) sur le génome humain, puis comptage brut des lectures alignées 
-import os
-from pathlib import Path
-
 rule fastqc:
     """Assess the FASTQ quality using FastQC BEFORE TRIMMING"""
     input:
-#        fq1 = "/mnt/c/Users/Antho/Documents/breast_cancer/data/171992_SIMG0590_T_totalRNA_sarcoma_43378_S9_L002_R1_001.220405.A00516.AHVHTNDSX2.fastq.gz",
-#        fq2 = "/mnt/c/Users/Antho/Documents/breast_cancer/data/171992_SIMG0590_T_totalRNA_sarcoma_43378_S9_L002_R2_001.220405.A00516.AHVHTNDSX2.fastq.gz"
         fq1 = os.path.join(config["path"]["fastq_dir"], "{id}_R1_001.220405.A00516.AHVHTNDSX2.fastq.gz"),
         fq2 = os.path.join(config["path"]["fastq_dir"], "{id}_R2_001.220405.A00516.AHVHTNDSX2.fastq.gz")
     output:
@@ -26,8 +21,6 @@ rule fastqc:
 # Règle pour le trimming avec trim_galore
 rule trim_reads:
     input:
-#        fq1 = "/mnt/f/data/171992_SIMG0590_T_totalRNA_sarcoma_43378_S9_L002_R1_001.220405.A00516.AHVHTNDSX2.fastq.gz",
-#        fq2 = "/mnt/f/data/171992_SIMG0590_T_totalRNA_sarcoma_43378_S9_L002_R2_001.220405.A00516.AHVHTNDSX2.fastq.gz"
         fq1 = os.path.join(config["path"]["fastq_dir"], "{id}_R1_001.220405.A00516.AHVHTNDSX2.fastq.gz"),
         fq2 = os.path.join(config["path"]["fastq_dir"], "{id}_R2_001.220405.A00516.AHVHTNDSX2.fastq.gz")
     output:
@@ -50,20 +43,18 @@ rule trim_reads:
         """
 
 
-rule qc_fastq:
+rule qc_fastq:# unpaired?
     """ Assess the FASTQ quality using FastQC AFTER TRIMMING"""
     input:
         trimm_fq1 = rules.trim_reads.output.gal_trim1,
         trimm_fq2 = rules.trim_reads.output.gal_trim2,
-#        trimm_unpaired_fq1 = rules.trim_reads.output.unpaired1,
-#        trimm_unpaired_fq2 = rules.trim_reads.output.unpaired2
     output:
-        qc_trimm_fq1_out = "data/qc_trim_galore/{id}/{id}_R1_001.220405.A00516.AHVHTNDSX2_val_1_fastqc.html",
-        qc_trimm_fq2_out = "data/qc_trim_galore/{id}/{id}_R2_001.220405.A00516.AHVHTNDSX2_val_2_fastqc.html"
+        qc_trimm_fq1_out = "data/qc_after_trim/{id}/{id}_R1_001.220405.A00516.AHVHTNDSX2_val_1_fastqc.html",
+        qc_trimm_fq2_out = "data/qc_after_trim/{id}/{id}_R2_001.220405.A00516.AHVHTNDSX2_val_2_fastqc.html"
     params:
-        out_dir = "data/qc_trim_galore/{id}"
+        out_dir = "data/qc_after_trim/{id}"
     log:
-        "logs/qc_trim_galore/{id}.log"
+        "logs/qc_after_trim/{id}.log"
     threads:
         8
     conda:
