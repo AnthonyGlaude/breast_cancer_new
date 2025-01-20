@@ -3,7 +3,7 @@ import pandas as pd
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
-from colorama import init, Fore, Style
+from colorama import init, Fore, Style # a supprimer 
 
 
 def read_vcf(vcf_file):

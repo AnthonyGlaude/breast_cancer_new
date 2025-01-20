@@ -3,24 +3,13 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Chemins des fichiers
-gtf_file = "F:/breast_cancer/workflow/data/references/gtf/homo_sapiens.gtf"
-vcf_file = "F:/breast_cancer/workflow/results/fraction/variants/171992_SIMG0590_T_totalRNA_sarcoma_43378_S9_L002/20QC_variant.vcf"
+vcf_file = "/mnt/c/Users/Antho/Documents/breast_cancer/breast_cancer/workflow/results/variants/171992_SIMG0590_T_totalRNA_sarcoma_43378_S9_L002/20QC_variant.vcf"
+gtf_file = "/mnt/c/Users/Antho/Documents/breast_cancer/breast_cancer/workflow/data/references/gtf/homo_sapiens.gtf"
 gtf_df = pd.read_csv(gtf_file, sep='\t', comment='#', header=None)
-vcf_df = pd.read_csv(vcf_file, sep='\t', comment='#', header=None)
+vcf_df = pd.read_csv(vcf_file, sep='\t', comment='#', header=None, low_memory=False)
 
 gtf_df.columns = ['CHROM', 'source', 'feature', 'start', 'end', 'score', 'strand', 'frame', 'attribute']
 vcf_df.columns = ['#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO', 'FORMAT', 'NEW_COLUMN']
-
-# Fonction pour obtenir les attributs comme 'gene_id' et 'transcript_id'
-def extract_attributes(attribute_str):
-    attributes = {}
-    for attr in attribute_str.split(';'):
-        if attr.strip():
-            key, value = attr.split(' ', 1)
-            key = key.strip().lower()
-            value = value.strip().strip('"')
-            attributes[key] = value
-    return attributes
 
 def get_feature_for_variant(row):
     chrom = row['#CHROM']
@@ -53,41 +42,42 @@ def get_feature_for_variant(row):
     return "Région Intragénique"  # Si aucune correspondance
 
 def main():
-    gtf_file = "F:/breast_cancer/workflow/data/references/gtf/homo_sapiens.gtf"
     global gtf_df
-    gtf_df = pd.read_csv(gtf_file, sep='\t', comment='#', header=None)
+    gtf_df = pd.read_csv(gtf_file, sep='\t', comment='#', header=None, low_memory=False)
     gtf_df.columns = ['CHROM', 'source', 'feature', 'start', 'end', 'score', 'strand', 'frame', 'attribute']
-    
-    variants_folder = "F:/breast_cancer/workflow/results/fraction/variants/"
-    total_counts = {"transcript": 0, "exon": 0, "gene": 0, "5-utr": 0, "3-utr": 0, "Région Intragénique": 0}  # Dictionnaire pour compter les fonctionnalités
+
+    variants_folder = "/mnt/c/Users/Antho/Documents/breast_cancer/breast_cancer/workflow/results/variants/"
+    total_counts = {"transcript": 0, "exon": 0, "gene": 0, "5-utr": 0, "3-utr": 0, "Région Intragénique": 0}
 
     for patient_folder in os.listdir(variants_folder):
         patient_path = os.path.join(variants_folder, patient_folder)
         vcf_file = os.path.join(patient_path, "20QC_variant.vcf")
 
         if os.path.isfile(vcf_file):
-            vcf_df = pd.read_csv(vcf_file, sep='\t', comment='#', header=None)
-            vcf_df.columns = ['#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO', 'FORMAT', 'NEW_COLUMN']
+            try:
+                vcf_df = pd.read_csv(vcf_file, sep='\t', comment='#', header=None, low_memory=False, on_bad_lines='skip')
 
-            for index, row in vcf_df.iterrows():
-                feature = get_feature_for_variant(row)
-                if isinstance(feature, list):
-                    # Compter chaque fonctionnalité non prioritaire
-                    for f in feature:
-                        total_counts[f] = total_counts.get(f, 0) + 1  # Utiliser get pour éviter une KeyError
-                else:
-                    total_counts[feature] += 1  # Incrémentation des comptages
+                for index, row in vcf_df.iterrows():
+                    print(f"Traitement du variant: {row}")  # Impression pour le débogage
+                    feature = get_feature_for_variant(row)
+                    print(f"Fonctionnalité trouvée: {feature}")  # Impression pour le débogage
 
-    # Créer le pie chart
+                    if isinstance(feature, list):
+                        for f in feature:
+                            total_counts[f] = total_counts.get(f, 0) + 1
+                    else:
+                        total_counts[feature] += 1
+            except Exception as e:
+                print(f"Erreur lors de la lecture du fichier {vcf_file}: {e}")
+
+    print("Comptes totaux:", total_counts)  # Debugging
+
     plt.figure(figsize=(8, 6), dpi=600)
     plt.pie(total_counts.values(), labels=total_counts.keys(), autopct='%1.1f%%', startangle=90)
     plt.ylabel('')
-    plt.title(f"Distribution des variants par localisation intragénique (N={len(os.listdir(variants_folder))})")
+    plt.title(f"Distribution des variants par localisation intragénique (N={sum(total_counts.values())})")
     plt.savefig("piechart_high_res.png", dpi=600)
     plt.show()
-
-    # Afficher les comptages totaux
-    print(total_counts)
 
 if __name__ == "__main__":
     main()
