@@ -1,5 +1,5 @@
 
-# À Utiliser la 1st fois, ensuite le fichier est sauvegardé
+# Used to download reference files (GTF, GFF, the human genome)
 rule download_human_gtf:
     """ Download gtf of human genome from Ensembl """
     output:
@@ -39,5 +39,5 @@ rule download_human_genome:
         "wget -O temp.gz {params.link} && "
         "gunzip temp.gz && "
         "mv temp {output.genome} && "
-        "touch {output.genome}"  # Met à jour l'horodatage
+        "touch {output.genome}"  
 

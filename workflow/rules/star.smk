@@ -1,16 +1,16 @@
-#Alignement des séquences ADNc (proviennent ARN-seq) sur le génome humain, puis comptage brut des lectures alignées 
+# RNA-Seq quality control followed by alignment with STAR 
 rule fastqc:
     """Assess the FASTQ quality using FastQC BEFORE TRIMMING"""
     input:
-        fq1 = os.path.join(config["path"]["fastq_dir"], "{id}_R1_001.220405.A00516.AHVHTNDSX2.fastq.gz"),
-        fq2 = os.path.join(config["path"]["fastq_dir"], "{id}_R2_001.220405.A00516.AHVHTNDSX2.fastq.gz")
+        fq1 = os.path.join(config["path"]["RNAseq_dir"], "{id}_R1_001.220405.A00516.AHVHTNDSX2.fastq.gz"),
+        fq2 = os.path.join(config["path"]["RNAseq_dir"], "{id}_R2_001.220405.A00516.AHVHTNDSX2.fastq.gz")
     output:
         qc_fq1_out = "data/qc/{id}/{id}_R1_001.220405.A00516.AHVHTNDSX2_fastqc.html",
         qc_fq2_out = "data/qc/{id}/{id}_R2_001.220405.A00516.AHVHTNDSX2_fastqc.html"
     params:
         out_dir = "data/qc/{id}"
     log:
-        "logs/fastqc_{id}.log"
+        "logs/{id}/fastqc.log"
     threads: 8
     conda:
         "../envs/fastqc.yml" 
@@ -18,13 +18,12 @@ rule fastqc:
         "mkdir -p {params.out_dir} && "
         "fastqc --outdir {params.out_dir} --format fastq --threads {threads} {input.fq1} {input.fq2} &> {log} "
 
-# Règle pour le trimming avec trim_galore
 rule trim_reads:
     input:
-        fq1 = os.path.join(config["path"]["fastq_dir"], "{id}_R1_001.220405.A00516.AHVHTNDSX2.fastq.gz"),
-        fq2 = os.path.join(config["path"]["fastq_dir"], "{id}_R2_001.220405.A00516.AHVHTNDSX2.fastq.gz")
+        fq1 = os.path.join(config["path"]["RNAseq_dir"], "{id}_R1_001.220405.A00516.AHVHTNDSX2.fastq.gz"),
+        fq2 = os.path.join(config["path"]["RNAseq_dir"], "{id}_R2_001.220405.A00516.AHVHTNDSX2.fastq.gz")
     output:
-        gal_trim1 = "data/trim_galore/{id}/{id}_R1_001.220405.A00516.AHVHTNDSX2_val_1.fq.gz", # les fichiers validés par trim_galore
+        gal_trim1 = "data/trim_galore/{id}/{id}_R1_001.220405.A00516.AHVHTNDSX2_val_1.fq.gz", 
         gal_trim2 = "data/trim_galore/{id}/{id}_R2_001.220405.A00516.AHVHTNDSX2_val_2.fq.gz"  
     params:
         out_dir = "data/trim_galore/{id}"
@@ -33,7 +32,7 @@ rule trim_reads:
     conda:
         "../envs/trim_galore.yml"
     log:
-        "logs/trim_{id}.log"
+        "logs/{id}/trim.log"
     shell:
         """
         mkdir -p {params.out_dir} &&\
@@ -54,7 +53,7 @@ rule qc_fastq:# unpaired?
     params:
         out_dir = "data/qc_after_trim/{id}"
     log:
-        "logs/qc_after_trim/{id}.log"
+        "logs/{id}/FASTQC2.log"
     threads:
         8
     conda:
@@ -75,14 +74,13 @@ rule star_index:
     """ Generates the genome index for STAR """
     input:
         fasta = rules.download_human_genome.output.genome,
-        #gtf = config['download']['human_gtf']        #GRCh38.p14 reference
-        gtf = rules.download_human_gtf.output.gtf
+        gtf = rules.download_human_gtf.output.gtf #GRCh38.p14 reference
     output:
         chrNameLength = config['path']['chrNameLength']
     params:
         dir = config['path']['star_index']
     log:
-        "logs/STAR/index.log"
+        "logs/{id}/index.log"
     conda:
         "../envs/star.yml"
     threads:
@@ -105,18 +103,20 @@ rule star_alignreads:
         fq2 = rules.trim_reads.output.gal_trim2
     output:
         bam = "results/STAR/{id}/Aligned.sortedByCoord.out.bam",
-        bam_logs = "results/STAR/{id}/Log.final.out"  #(temp) 
+        bam_logs = "results/STAR/{id}/Log.final.out"  #(temp)
     params:
         index = config['path']['star_index'],
         output_dir = "results/STAR/{id}/"
     log:
-        "logs/STAR/{id}.log"
+        "logs/{id}/alignreads.log"
     threads:
         10
     conda:
         "../envs/star.yml"
     shell:
         """
+        rm -rf /tmp/{id} && \
+        mkdir -p /tmp/{id} && \
         STAR --runMode alignReads \
             --genomeDir data/references/star_index/ \
             --readFilesIn {input.fq1} {input.fq2} \
@@ -133,6 +133,6 @@ rule star_alignreads:
             --outFilterMultimapNmax 100 \
             --winAnchorMultimapNmax 100 \
             --limitBAMsortRAM 30000000000 \
-            --outTmpDir /home/antho/temp \ 
+            --outTmpDir /tmp/{id} \
             &> {log}
         """

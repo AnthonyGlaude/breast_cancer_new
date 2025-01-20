@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import io
 
 # Charger le fichier VCF (ignorer les lignes de commentaires commençant par ##)
-vcf_file = "F:/breast_cancer/workflow/results/fraction/variants/171992_SIMG0590_T_totalRNA_sarcoma_43378_S9_L002/20QC_variant.vcf"
+vcf_file = "/mnt/c/Users/Antho/Documents/breast_cancer/breast_cancer/workflow/results/variants/171992_SIMG0590_T_totalRNA_sarcoma_43378_S9_L002/20QC_variant.vcf"
 with open(vcf_file, 'r') as f:
     lines = [line for line in f if not line.startswith('##')]
 
@@ -14,7 +14,7 @@ df = pd.read_csv(io.StringIO(''.join(lines)), sep='\t')
 df.columns = ["CHROM", "POS", "ID", "REF", "ALT", "QUAL", "FILTER", "INFO", "FORMAT", "SAMPLE"]
 
 # Charger le fichier GTF
-gtf_file = "F:/breast_cancer/workflow/data/references/gtf/homo_sapiens.gtf"
+gtf_file = "/mnt/c/Users/Antho/Documents/breast_cancer/breast_cancer/workflow/data/references/gtf/homo_sapiens.gtf"
 gtf = pd.read_csv(gtf_file, sep='\t', comment='#', header=None)
 gtf.columns = ['CHROM', 'source', 'feature', 'start', 'end', 'score', 'strand', 'frame', 'attribute']
 
@@ -46,7 +46,6 @@ pd.set_option('display.max_colwidth', None)  # Pas de troncature de largeur des 
 
 # Filtrer les gènes dans le fichier GTF
 genes = gtf[gtf['feature'] == 'gene']
-print(genes.head)
 
 # Associer les annotations GTF aux variants VCF (en fonction de la position)
 # Ici, on suppose qu'on veut ajouter le nom du gène pour chaque variante

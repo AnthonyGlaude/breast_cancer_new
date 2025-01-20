@@ -26,7 +26,7 @@ configfile: "../profile_local/config.yaml"
 configfile: "../config/config.json"
 
 
-directory = os.path.join(config["path"]["fastq_dir"])
+directory = os.path.join(config["path"]["RNAseq_dir"])
 id_set = set()
 for nom_fichier in os.listdir(directory):
     if nom_fichier.endswith(".fastq.gz"):
@@ -41,21 +41,18 @@ include: "rules/download_genome.smk"
 include: "rules/star.smk"
 include: "rules/kallisto.smk"
 include: "rules/variants.smk"
-include: "rules/bedgraph.smk"
+#include: "rules/bedgraph.smk"
 
 rule all:
     input:
-        expand("results/graph/{id}.bw", id=id_list),
         expand("data/qc/{id}/{id}_R1_001.220405.A00516.AHVHTNDSX2_fastqc.html", id=id_list),
         expand("data/trim_galore/{id}/{id}_R2_001.220405.A00516.AHVHTNDSX2_val_2.fq.gz", id=id_list), 
         expand("data/qc_trim_galore/{id}/{id}_R1_001.220405.A00516.AHVHTNDSX2_val_1_fastqc.html", id=id_list),
-#        expand("data/references/transcit_position.txt", id=id_list),
-#        expand("results/STAR/{id}/Aligned.sortedByCoord.out.bam", id = id_list),   
-#        expand("results/variants/{id}/20QC_variant.vcf", id=id_list),
-#        expand("results/dge/kallisto/{id}/abundance.tsv", id=id_list),
-#        expand("results/variants/{id}/transcrits_variants.fa", id=id_list),
-#        expand("results/variants/{id}/annotat_variants.vcf", id=id_list),
-#        expand("results/variants/{id}/test_transcripts.fa", id=id_list)
+        expand("data/references/transcit_position.txt", id=id_list),
+        expand("results/STAR/{id}/Aligned.sortedByCoord.out.bam", id = id_list),   
+        expand("results/dge/kallisto/{id}/abundance.tsv", id=id_list),
+        expand("results/variants/{id}/20QC_variant.vcf", id=id_list),
+        expand("results/variants/{id}/test_transcripts.fa", id=id_list)
 rule download_genome:
     input:
         gff3 = 'data/references/gff3/homo_sapiens.gff3',
@@ -65,4 +62,3 @@ rule quantification:
     input:
         build_transcriptome = "data/references/kallisto/transcriptome.fa",
         build_index = "data/references/kallisto/transcriptome.fa",
-        Kall_quantif = expand("results/dge/kallisto/{id}_tpm.tsv", id=id_list)  # résultat

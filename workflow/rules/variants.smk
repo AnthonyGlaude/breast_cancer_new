@@ -41,22 +41,6 @@ rule filter_variants: # QC des mutants avec trashold de 20
         "bcftools filter -s LowQual -e 'QUAL<20' {input.vcf} -o {output.vcf_filtered} > {log} 2>&1"
 
 
-
-# Next, il faut que un fichier transcriptome non mutant avec tout les gènes ayant un mutant 
-# input -> transcriptome_custom + filter_variants avec grep 
-
-rule filter_transcriptome_by_mutations:
-    input:
-        transcriptome = rules.build_filtered_transcriptome.output.transcriptome_final_custom,
-        vcf = rules.filter_variants.output.vcf_filtered 
-    output:
-        filtered_transcriptome = "results/{id}/filtered_transcriptome_with_mutations.fa"
-    conda:
-        "../envs/python.yml"
-    script:
-        "../scripts/filter_mutated_genes_and_filter_transcriptome.py"  # Script Python pour extraire les gènes mutés et filtrer directement
-
-
 rule apply_variants:
     input:
         fasta = rules.download_human_genome.output.genome,  

@@ -85,7 +85,7 @@ rule build_filtered_transcriptome:
         genome = rules.download_human_genome.output.genome,
         transcript_ids = rules.filter_abundance.output.transcript_ids
     output:
-        filtered_gtf = "results/{id}/filtered_transcripts.gtf",
+        filtered_gtf = "results/{id}/filtered_transcripts.gtf", #utile?
         transcriptome_final_custom = "results/{id}/transcriptome_final_custom.fa"
     conda:
         "../envs/gffread.yml"

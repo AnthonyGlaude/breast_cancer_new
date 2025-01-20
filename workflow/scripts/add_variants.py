@@ -82,11 +82,10 @@ def find_exons_for_mutations(vcf_df, gtf_file):
 
 
 def extract_genomic_sequence(genome_file, exons_df):
-    # Charger le génome à partir du fichier FASTA
     genome = SeqIO.to_dict(SeqIO.parse(genome_file, "fasta"))
     mutated_sequences = []
 
-    # Initialiser colorama
+    #colorama
     init(autoreset=True)
 
     for _, exon in exons_df.iterrows():
@@ -95,17 +94,15 @@ def extract_genomic_sequence(genome_file, exons_df):
         alt_nucleotide = exon['alt_nucleotide']
         strand = exon['strand']
         gene_name = exon['gene_name']
-        transcript_id = exon['transcript_id']  # Récupérer le transcript_id ici
+        transcript_id = exon['transcript_id'] 
 
-        # Formater la clé du chromosome
         chromosome_key = f"chr{chromosome}" if f"chr{chromosome}" in genome else chromosome
         
         if chromosome_key in genome:
             seq_record = genome[chromosome_key]
             start_index = exon['exon_start'] - 1  # 0-indexed
-            end_index = exon['exon_end']  # La fin est exclusive
+            end_index = exon['exon_end']  #  fin exclusive
 
-            # Vérifier que les indices ne sortent pas des limites
             if start_index < 0 or end_index > len(seq_record.seq):
                 print(f"{Fore.YELLOW}Warning: Indices out of range for chromosome {chromosome} at position {position}.{Style.RESET_ALL}")
                 continue
@@ -132,47 +129,32 @@ def extract_genomic_sequence(genome_file, exons_df):
                         'original_sequence': genomic_sequence,
                         'modified_sequence': modified_sequence,
                         'gene_name': gene_name,
-                        'transcript_id': transcript_id  # Inclure ici
+                        'transcript_id': transcript_id
                     })
                 else:
-                    # Afficher la séquence extraite et les détails de la discordance
                     print(f"Extracted sequence: {genomic_sequence}")
                     print(f"{Fore.YELLOW}Warning: Reference nucleotide mismatch at {position}. Found: {ref_sequence}, Expected: {exon['ref_nucleotide']}{Style.RESET_ALL}")
-
-                    # Mettre en évidence le nucléotide trouvé dans la séquence extraite
-                    highlighted_sequence = list(genomic_sequence)  # Créer une liste pour la modification
-
-                    # Déterminer la position du mismatch dans la séquence extraite
-                    mismatch_position = ref_sequence_start
-                    for i in range(len(exon['ref_nucleotide'])):
-                        if ref_sequence[i] != exon['ref_nucleotide'][i]:
-                            # Mettre en surbrillance le nucléotide trouvé dans la séquence extraite
-                            highlighted_sequence[mismatch_position + i] = f"{Fore.RED}{highlighted_sequence[mismatch_position + i]}{Style.RESET_ALL}"
-
-                    highlighted_sequence = ''.join(highlighted_sequence)
-                    print(f"Highlighted extracted sequence with mismatch: {highlighted_sequence}")
-
             else:
                 print(f"{Fore.YELLOW}Warning: Indices out of range for chromosome {chromosome} at position {position}.{Style.RESET_ALL}")
         else:
             print(f"{Fore.YELLOW}Warning: Chromosome {chromosome} not found in the genome.{Style.RESET_ALL}")
 
-    # Afficher les séquences modifiées
     for mutated in mutated_sequences:
         print(f"Chromosome: {mutated['chromosome']}, Position: {mutated['position']}, Strand: {mutated['strand']}")
-        
+
         original_sequence = mutated['original_sequence']
         modified_sequence = mutated['modified_sequence']
 
-        # Mettre en surbrillance les différences dans la séquence modifiée
         highlighted_modified_sequence = ''.join(
-            f"{Fore.RED}{char}{Style.RESET_ALL}" if char != original_sequence[i] else char
+            f"{Fore.RED}{char}{Style.RESET_ALL}" 
+            if i >= len(original_sequence) or char != original_sequence[i] else char
             for i, char in enumerate(modified_sequence)
         )
 
         print(f"Original Sequence: {original_sequence}")
         print(f"Modified Sequence: {highlighted_modified_sequence}")
         print(f"Gene Name: {mutated['gene_name']}\n")
+    
     mutated_sequences_df = pd.DataFrame(mutated_sequences)
     return mutated_sequences_df
 
@@ -181,12 +163,10 @@ def extract_genomic_sequence(genome_file, exons_df):
 
 def save_mutated_transcripts(transcripts_fasta, mutated_sequences_df, mutated_output_fasta, combined_output_fasta):
 
-    # Charger les transcrits originaux
     transcripts = {record.id: record for record in SeqIO.parse(transcripts_fasta, "fasta")}
-    combined_transcripts = list(transcripts.values())  # Liste des transcrits originaux
-    mutated_transcripts = []  # Liste pour les transcrits mutés
+    combined_transcripts = list(transcripts.values())  
+    mutated_transcripts = []  
 
-    # Regrouper les mutations par transcript_id
     grouped_mutations = mutated_sequences_df.groupby("transcript_id")
 
     for transcript_id, group in grouped_mutations:
@@ -212,7 +192,6 @@ def save_mutated_transcripts(transcripts_fasta, mutated_sequences_df, mutated_ou
 
             end_pos = start_pos + len(original_sequence)
 
-            # Trouver les différences entre les séquences
             diff = [
                 (i, orig, mod) for i, (orig, mod) in enumerate(zip(original_sequence, modified_sequence))
                 if orig != mod
@@ -222,14 +201,11 @@ def save_mutated_transcripts(transcripts_fasta, mutated_sequences_df, mutated_ou
                 mutation_pos_in_transcript = start_pos + diff_index
                 mutation_descriptions.append(f"pos {mutation_pos_in_transcript}: {original_nuc}>{modified_nuc}")
 
-                # Appliquer la mutation
                 updated_transcript_seq = (
                     updated_transcript_seq[:mutation_pos_in_transcript] +
                     modified_nuc +
                     updated_transcript_seq[mutation_pos_in_transcript + 1:]
                 )
-
-        # Créer un nouvel enregistrement pour le transcrit muté
         mutation_summary = "; ".join(mutation_descriptions)
         mutated_transcript_record = SeqRecord(
             Seq(updated_transcript_seq),
@@ -240,14 +216,12 @@ def save_mutated_transcripts(transcripts_fasta, mutated_sequences_df, mutated_ou
         mutated_transcripts.append(mutated_transcript_record)
         combined_transcripts.append(mutated_transcript_record)
 
-    # Écrire les transcrits mutés dans un fichier FASTA
     with open(mutated_output_fasta, "w") as mutated_out:
         SeqIO.write(mutated_transcripts, mutated_out, "fasta")
 
-    # Écrire le transcriptome combiné (original + muté) dans un fichier FASTA
     with open(combined_output_fasta, "w") as combined_out:
         SeqIO.write(combined_transcripts, combined_out, "fasta")
-
+        
     print(f"Mutated transcripts saved to: {mutated_output_fasta}")
     print(f"Combined transcriptome saved to: {combined_output_fasta}")
     
