@@ -12,7 +12,7 @@ rule build_transcriptome:  # Sert de transcriptome de référence avec tous les 
     message:
         "Build a reference transcriptome using gffread."
     log:
-        "logs/kallisto/{id}/build_transcriptome.log"
+        "logs/kallisto/build_transcriptome.log"
     shell:
         """
         gffread {input.gtf} -g {input.genome} -w {output.transcriptome} -o {output.positions}
@@ -27,7 +27,7 @@ rule kallisto_index:  # L'index qui sert à quantifier
     conda:
         "../envs/kallisto.yml"
     log:
-        "logs/kallisto/{id}/index.log"
+        "logs/kallisto/index.log"
     message:
         "Builds an index from the FASTA file."
     shell:

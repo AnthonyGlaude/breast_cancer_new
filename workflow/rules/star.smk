@@ -76,24 +76,26 @@ rule star_index:
         fasta = rules.download_human_genome.output.genome,
         gtf = rules.download_human_gtf.output.gtf #GRCh38.p14 reference
     output:
-        chrNameLength = config['path']['chrNameLength']
+        chrNameLength = "data/star_index/chrNameLength.txt"
     params:
-        dir = config['path']['star_index']
+        dir = "data/star_index"  
     log:
-        "logs/{id}/index.log"
+        "logs/index.log"
     conda:
         "../envs/star.yml"
     threads:
         8
     shell:
-        "mkdir -p {params.dir} && "
-        "STAR --runThreadN {threads} "
-        "--runMode genomeGenerate "
-        "--genomeDir {params.dir} "
-        "--genomeFastaFiles {input.fasta} "
-        "--sjdbGTFfile {input.gtf} "
-        "--sjdbOverhang 99"
-        "&> {log}"
+        """
+        mkdir -p {params.dir} && \
+        STAR --runThreadN {threads} \
+        --runMode genomeGenerate \
+        --genomeDir {params.dir} \
+        --genomeFastaFiles {input.fasta} \
+        --sjdbGTFfile {input.gtf} \
+        --sjdbOverhang 99 \
+        &> {log}
+        """
 
 rule star_alignreads:
     """ Generates a bam file using STAR """
