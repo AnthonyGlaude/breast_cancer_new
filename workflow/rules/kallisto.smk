@@ -1,6 +1,7 @@
 # Règle pour la quantification des transcrits avec Kallisto
 
 rule build_transcriptome:  # Sert de transcriptome de référence avec tous les ID transcrits
+""" UTRs and exons are extracted using gffread but introns are not included """
     input:
         genome = rules.download_human_genome.output.genome,
         gtf = rules.download_human_gtf.output.gtf
