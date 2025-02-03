@@ -117,10 +117,10 @@ rule star_alignreads:
         "../envs/star.yml"
     shell:
         """
-        rm -rf /tmp/{id} && \
-        mkdir -p /tmp/{id} && \
+        rm -rf /tmp/{wildcards.id} && \
+        mkdir -p /tmp/{wildcards.id} && \
         STAR --runMode alignReads \
-            --genomeDir data/references/star_index/ \
+            --genomeDir {params.index} \
             --readFilesIn {input.fq1} {input.fq2} \
             --runThreadN {threads} \
             --readFilesCommand zcat \
@@ -135,6 +135,6 @@ rule star_alignreads:
             --outFilterMultimapNmax 100 \
             --winAnchorMultimapNmax 100 \
             --limitBAMsortRAM 30000000000 \
-            --outTmpDir /tmp/{id} \
+            --outTmpDir /tmp/{wildcards.id} \
             &> {log}
         """
