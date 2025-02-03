@@ -3,7 +3,7 @@ import pandas as pd
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
-from colorama import init, Fore, Style # a supprimer 
+from colorama import init, Fore, Style 
 
 
 def read_vcf(vcf_file):
@@ -33,52 +33,53 @@ def read_vcf(vcf_file):
     return mutations_df
 
 def find_exons_for_mutations(vcf_df, gtf_file):
-    exons = []
+    regions = []  # Change 'exons' to 'regions' to include both exons and UTRs
     for _, mutation in vcf_df.iterrows():
-        found_exon = False
+        found_region = False
         with open(gtf_file, 'r') as gtf:
             for line in gtf:
                 if line.startswith('#'):
                     continue
                 fields = line.strip().split('\t')
-                if fields[2] == 'exon':
+                if fields[2] in ['exon', 'five_prime_utr', 'three_prime_utr']:  # Include UTRs
                     chromosome = fields[0]
                     start = int(fields[3])
                     end = int(fields[4])
                     strand = fields[6]
                     attributes = fields[8].split(';')
                     gene_name = None
-                    transcript_id = None  # Ajout de transcript_id
+                    transcript_id = None  # Add transcript_id
 
                     for attribute in attributes:
                         if 'gene_name' in attribute:
                             gene_name = attribute.split(' ')[-1].replace('"', '')
-                        elif 'transcript_id' in attribute:  # Récupérer le transcript_id
+                        elif 'transcript_id' in attribute:  # Get transcript_id
                             transcript_id = attribute.split(' ')[-1].replace('"', '')
 
                     if (mutation['chromosome'] == chromosome and 
                         start <= mutation['position'] <= end and 
                         mutation['gene_name'] == gene_name):
-                        exons.append({
+                        regions.append({
                             'chromosome': chromosome,
                             'position': mutation['position'],
                             'ref_nucleotide': mutation['ref_nucleotide'],
                             'alt_nucleotide': mutation['alt_nucleotide'],
                             'gene_name': gene_name,
-                            'transcript_id': transcript_id,  # Ajouter le transcript_id
-                            'exon_start': start,
-                            'exon_end': end,
+                            'transcript_id': transcript_id,  # Add transcript_id
+                            'region_start': start,  # Change 'exon_start' to 'region_start'
+                            'region_end': end,      # Change 'exon_end' to 'region_end'
                             'strand': strand
                         })
-                        found_exon = True
+                        found_region = True
                         break
         
-        if not found_exon:
-            print(f"Warning: Mutation at position {mutation['position']} not found in any exon for gene {mutation['gene_name']}.")
+        if not found_region:
+            print(f"Warning: Mutation at position {mutation['position']} not found in any exon or UTR for gene {mutation['gene_name']}.")
     
-    exons_df = pd.DataFrame(exons)
-    print("Annotated Exons DataFrame:\n", exons_df)
-    return exons_df
+    regions_df = pd.DataFrame(regions)  
+    print("Annotated Regions DataFrame:\n", regions_df)  
+    return regions_df
+
 
 
 def extract_genomic_sequence(genome_file, exons_df):
@@ -100,8 +101,8 @@ def extract_genomic_sequence(genome_file, exons_df):
         
         if chromosome_key in genome:
             seq_record = genome[chromosome_key]
-            start_index = exon['exon_start'] - 1  # 0-indexed
-            end_index = exon['exon_end']  #  fin exclusive
+            start_index = exon['region_start'] - 1  # 0-indexed
+            end_index = exon['region_end']  #  fin exclusive
 
             if start_index < 0 or end_index > len(seq_record.seq):
                 print(f"{Fore.YELLOW}Warning: Indices out of range for chromosome {chromosome} at position {position}.{Style.RESET_ALL}")
@@ -238,9 +239,11 @@ def main():
     mutated_output_fasta = "/mnt/c/Users/Antho/Documents/nouveau_projet/workflow/results/171992_SIMG0590_T_totalRNA_sarcoma_43378_S9_L002/mutated_transcripts.fa"
     combined_output_fasta = "/mnt/c/Users/Antho/Documents/nouveau_projet/workflow/results/171992_SIMG0590_T_totalRNA_sarcoma_43378_S9_L002/combined_transcripts.fa"
     transcripts_fasta = "/mnt/c/Users/Antho/Documents/breast_cancer/breast_cancer/workflow/data/references/transcriptome.fa"
-    vcf_df = read_vcf(vcf_file)
-    annotated_exons_df = find_exons_for_mutations(vcf_df, gtf_file)
-    mutated_sequences_df = extract_genomic_sequence(fasta_file, annotated_exons_df)
+    
+    # fonctions 
+    vcf_df = read_vcf(vcf_file) # lecture et canotation des infos dans df
+    annotated_exons_df = find_exons_for_mutations(vcf_df, gtf_file) # canotation des infos from gtf 
+    mutated_sequences_df = extract_genomic_sequence(fasta_file, annotated_exons_df) # 
     save_mutated_transcripts(transcripts_fasta, mutated_sequences_df, mutated_output_fasta, combined_output_fasta)
 if __name__ == "__main__":
     main()
