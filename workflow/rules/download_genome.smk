@@ -30,18 +30,18 @@ rule download_human_genome:
         """
 
 
-rule download_human_gff3:
-    """ Download gff3 of human genome from Ensembl """
-    output:
-        gff3 = 'data/references/gff3/homo_sapiens.gff3'
-    params:
-        link = config['download']['human_gff3']
-    shell:
-        """
-        mkdir -p data/references/gff3 && 
-        wget -O temp.gz {params.link} && 
-        gunzip temp.gz && 
-        mv temp {output.gff3} &&
-        rm temp.gz
-        """
+#rule download_human_gff3:
+#   """ Download gff3 of human genome from Ensembl """
+#    output:
+#        gff3 = 'data/references/gff3/homo_sapiens.gff3'
+#    params:
+#        link = config['download']['human_gff3']
+#    shell:
+#        """
+#        mkdir -p data/references/gff3 && 
+#        wget -O temp.gz {params.link} && 
+#        gunzip temp.gz && 
+#        mv temp {output.gff3} &&
+#        rm temp.gz
+#        """
 
