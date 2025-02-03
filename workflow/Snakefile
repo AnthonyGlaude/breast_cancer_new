@@ -54,7 +54,7 @@ rule all:
         expand("results/variants/{id}/20QC_variant.vcf", id=id_list),
 rule download_genome:
     input:
-        gff3 = 'data/references/gff3/homo_sapiens.gff3',
+        gtf = 'data/references/gtf/Homo_sapiens.GRCh38.110.gtf3',
         genome = 'data/references/genome_fa/homo_sapiens_genome.fa',
 
 rule quantification: 
