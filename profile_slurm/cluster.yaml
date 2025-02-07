@@ -4,7 +4,7 @@ __default__:
     cpus-per-task: 2
     mem: 4G
     time: 0-0:30:00
-    mail-user: "anthony.glaude@usherbrooke.ca"
+    mail-user: "glaa3301@usherbrooke.ca"
     mail-type: FAIL
 
 fastqc:
